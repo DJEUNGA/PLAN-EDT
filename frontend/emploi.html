@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PlanEDT — Mon emploi du temps</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* ── Style tableau ENSPD ── */
+    .edt-enspd {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      background: white;
+    }
+    .edt-enspd th {
+      background: #1a1a2e;
+      color: white;
+      padding: 8px 6px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      border: 1px solid #333;
+      text-transform: uppercase;
+    }
+    .edt-enspd td {
+      border: 1px solid #ccc;
+      vertical-align: middle;
+      text-align: center;
+      padding: 0;
+      min-height: 70px;
+    }
+    .heure-cell {
+      background: #f0f0f0;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #333;
+      padding: 6px 4px;
+      width: 70px;
+      white-space: nowrap;
+    }
+    .cours-enspd {
+      padding: 5px 4px;
+      min-height: 65px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+    .cours-type {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #555;
+    }
+    .cours-nom {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .cours-prof {
+      font-size: 0.7rem;
+      color: #444;
+      font-style: italic;
+    }
+    .cours-salle {
+      font-size: 0.68rem;
+      color: #888;
+      font-weight: 600;
+    }
+    .cours-heures {
+      font-size: 0.68rem;
+      color: #666;
+      font-weight: 600;
+    }
+    .pause-row td {
+      background: #4a7c59;
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 5px;
+      letter-spacing: 3px;
+    }
+    .vide-cell {
+      background: #fafafa;
+      color: #ddd;
+      font-size: 0.7rem;
+    }
+    .annule-cell {
+      background: #fee2e2;
+      opacity: 0.7;
+    }
+    .annule-cell .cours-nom {
+      text-decoration: line-through;
+      color: #dc2626;
+    }
+
+    /* En-tête style ENSPD */
+    .enspd-header {
+      background: white;
+      border: 2px solid #1a1a2e;
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .enspd-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .enspd-title {
+      text-align: center;
+    }
+    .enspd-title h2 {
+      font-size: 1rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #1a1a2e;
+      letter-spacing: 1px;
+    }
+    .enspd-title h3 {
+      font-size: 0.85rem;
+      color: #444;
+      margin-top: 2px;
+    }
+    .enspd-stats {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.78rem;
+      color: #444;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid #eee;
+    }
+    .enspd-stats span { font-weight: 600; }
+    .stat-red   { color: #dc2626; }
+    .stat-green { color: #16a34a; }
+    .stat-blue  { color: #2563eb; }
+
+    /* Bouton imprimer */
+    .btn-print {
+      background: #1a1a2e;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-print:hover { opacity: 0.85; }
+
+    @media print {
+      .sidebar, .main-header, .controls-bar, .btn-print { display: none !important; }
+      .main-content { margin-left: 0 !important; }
+      .edt-enspd { font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <svg class="logo-icon" width="28" height="28" viewBox="0 0 40 40" fill="none">
+        <rect width="40" height="40" rx="10" fill="#4F46E5"/>
+        <rect x="8"  y="10" width="6" height="6" rx="1.5" fill="white"/>
+        <rect x="17" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.7"/>
+        <rect x="26" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.4"/>
+        <rect x="8"  y="19" width="6" height="6" rx="1.5" fill="white" opacity="0.7"/>
+        <rect x="17" y="19" width="6" height="6" rx="1.5" fill="white"/>
+        <rect x="26" y="19" width="6" height="6" rx="1.5" fill="white" opacity="0.7"/>
+        <rect x="8"  y="28" width="6" height="6" rx="1.5" fill="white" opacity="0.4"/>
+        <rect x="17" y="28" width="6" height="6" rx="1.5" fill="white" opacity="0.7"/>
+        <rect x="26" y="28" width="6" height="6" rx="1.5" fill="white"/>
+      </svg>
+      <h2>PlanEDT</h2>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-link active" data-page="emploi" onclick="afficherPage('emploi')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Mon emploi du temps
+      </a>
+      <a class="nav-link" data-page="rattrapages" onclick="afficherPage('rattrapages')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        Rattrapages
+      </a>
+      <a class="nav-link" data-page="absences" onclick="afficherPage('absences')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Signaler une absence
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">ET</div>
+        <div class="user-details">
+          <div class="user-name" id="user-name">Étudiant</div>
+          <div class="user-role" id="user-role">etudiant</div>
+        </div>
+      </div>
+      <button class="nav-link" onclick="deconnecter()" style="color:var(--danger);margin-top:4px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Déconnexion
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══ CONTENU ═══ -->
+  <div class="main-content">
+
+    <header class="main-header">
+      <h1 id="page-titre">Mon emploi du temps</h1>
+      <div class="header-actions">
+        <button class="notif-btn" id="btn-notif" onclick="toggleNotifs()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-badge hidden" id="notif-count">0</span>
+        </button>
+        <div class="notif-panel hidden" id="notif-panel">
+          <div class="notif-panel-header">
+            <h3>Notifications</h3>
+            <button class="btn btn-secondary" style="font-size:0.75rem;padding:3px 8px" onclick="toutMarquerLues()">Tout lire</button>
+          </div>
+          <div id="notif-liste"><div class="notif-empty">Aucune notification</div></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- ── PAGE : EMPLOI DU TEMPS ── -->
+      <section id="page-emploi">
+
+        <!-- Contrôles -->
+        <div class="controls-bar flex items-center gap-2 mb-3" style="flex-wrap:wrap">
+          <select id="edt-semaine" style="width:auto;padding:0.5rem 0.7rem;border:1px solid var(--gray-300);border-radius:var(--radius-sm);font-size:0.9rem" onchange="chargerEDT()">
+            <option value="1">Semaine 1</option>
+            <option value="2">Semaine 2</option>
+            <option value="3">Semaine 3</option>
+            <option value="4">Semaine 4</option>
+          </select>
+          <span id="nom-classe" class="badge badge-primary" style="font-size:0.85rem;padding:5px 12px"></span>
+          <button class="btn-print" onclick="window.print()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimer
+          </button>
+        </div>
+
+        <!-- En-tête style ENSPD -->
+        <div class="enspd-header" id="enspd-header" style="display:none">
+          <div class="enspd-title">
+            <h2>EMPLOI DU TEMPS — <span id="header-classe"></span></h2>
+            <h3>Année académique 2025/2026 — <span id="header-semaine"></span></h3>
+          </div>
+          <div class="enspd-stats" id="enspd-stats"></div>
+        </div>
+
+        <!-- Tableau EDT style ENSPD -->
+        <div id="edt-container" style="overflow-x:auto">
+          <div style="padding:2rem;text-align:center;color:var(--gray-400)">Chargement...</div>
+        </div>
+
+      </section>
+
+      <!-- ── PAGE : RATTRAPAGES ── -->
+      <section id="page-rattrapages" class="hidden">
+        <div class="table-container">
+          <div class="table-header"><h2>Rattrapages planifiés</h2></div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Matière</th><th>Professeur</th><th>Jour</th><th>Horaire</th><th>Salle</th><th>Statut</th></tr></thead>
+              <tbody id="rattrapages-tbody">
+                <tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:1.5rem">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── PAGE : SIGNALER ABSENCE ── -->
+      <section id="page-absences" class="hidden">
+        <div class="card" style="max-width:500px">
+          <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Signaler une absence de professeur</h2>
+          <div id="absence-msg" class="alert hidden"></div>
+          <div class="form-group">
+            <label>Professeur absent</label>
+            <select id="absence-prof"><option value="">-- Choisir --</option></select>
+          </div>
+          <div class="form-group">
+            <label>Date de l'absence</label>
+            <input type="date" id="absence-date"/>
+          </div>
+          <div class="form-group">
+            <label>Heure début (optionnel)</label>
+            <input type="time" id="absence-heure-debut"/>
+          </div>
+          <div class="form-group">
+            <label>Heure fin (optionnel)</label>
+            <input type="time" id="absence-heure-fin"/>
+          </div>
+          <div class="alert alert-warning" style="margin-bottom:1rem">
+            ⚠️ Un rattrapage sera planifié automatiquement.
+          </div>
+          <button class="btn btn-primary btn-full" onclick="signalerAbsence()">Signaler l'absence</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script>
+
+const user = verifierSession();
+if (user && user.role !== 'etudiant') window.location.href = 'dashboard.html';
+afficherInfosUtilisateur();
+chargerNotifications();
+init();
+
+async function init() {
+  try {
+    const [classes, profs] = await Promise.all([Classes.lister(), Professeurs.lister()]);
+    const maClasse = classes.find(c => c.id === user.classe_id);
+    if (maClasse) {
+      document.getElementById('nom-classe').textContent = maClasse.nom;
+      document.getElementById('header-classe').textContent = maClasse.nom;
+    }
+    const sel = document.getElementById('absence-prof');
+    profs.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.nom}</option>`);
+    chargerEDT();
+  } catch(e) { console.error(e); }
+}
+
+// ── Emploi du temps style ENSPD ─────────────────────────────────────────────
+async function chargerEDT() {
+  const semaine   = document.getElementById('edt-semaine').value;
+  const container = document.getElementById('edt-container');
+  const header    = document.getElementById('enspd-header');
+
+  document.getElementById('header-semaine').textContent = `Semaine ${semaine}`;
+
+  if (!user.classe_id) {
+    container.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--gray-400)">Aucune classe associée.</div>';
+    return;
+  }
+
+  container.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--gray-400)">Chargement...</div>';
+
+  try {
+    const slots = await Emplois.detail(user.classe_id, semaine);
+    header.style.display = 'block';
+    afficherStatsEDT(slots);
+    container.innerHTML = construireTableauENSPD(slots);
+  } catch(e) {
+    container.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--danger)">${e.message}</div>`;
+  }
+}
+
+function afficherStatsEDT(slots) {
+  const statsEl = document.getElementById('enspd-stats');
+  const total   = slots.length;
+  const annules = slots.filter(s => s.statut === 'annule').length;
+  const normaux = total - annules;
+
+  // Compter heures par matière
+  const heuresParMatiere = {};
+  slots.forEach(s => {
+    if (!heuresParMatiere[s.matiere_nom]) heuresParMatiere[s.matiere_nom] = 0;
+    heuresParMatiere[s.matiere_nom] += 2; // 2h par créneau
+  });
+
+  statsEl.innerHTML = `
+    <span class="stat-blue">Cours programmés : <b>${total}</b></span>
+    <span class="stat-green">Cours normaux : <b>${normaux}</b></span>
+    ${annules > 0 ? `<span class="stat-red">Cours annulés : <b>${annules}</b></span>` : ''}
+  `;
+}
+
+function construireTableauENSPD(slots) {
+  if (!slots.length) {
+    return '<div style="padding:2rem;text-align:center;color:var(--gray-400)">Aucun cours pour cette semaine.</div>';
+  }
+
+  const jours    = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const creneaux = [
+    { label: '7H30\n—\n9H30',   debut: '07:30', fin: '09:30' },
+    { label: '9H30\n—\n11H30',  debut: '09:30', fin: '11:30' },
+    { label: '12H30\n—\n14H30', debut: '12:30', fin: '14:30' },
+    { label: '14H30\n—\n16H30', debut: '14:30', fin: '16:30' },
+  ];
+
+  // Compter heures déjà effectuées par matière (toutes semaines confondues)
+  const heuresEffectuees = {};
+  slots.forEach(s => {
+    if (!heuresEffectuees[s.matiere_id]) heuresEffectuees[s.matiere_id] = 0;
+    heuresEffectuees[s.matiere_id] += 2;
+  });
+
+  let html = `<table class="edt-enspd">
+    <thead><tr>
+      <th style="width:70px">Heure</th>`;
+  jours.forEach(j => html += `<th>${j}</th>`);
+  html += '</tr></thead><tbody>';
+
+  creneaux.forEach((cr, index) => {
+    // Ligne de pause entre matin et après-midi
+    if (index === 2) {
+      html += `<tr class="pause-row"><td colspan="7">p &nbsp;&nbsp; A &nbsp;&nbsp; U &nbsp;&nbsp; S &nbsp;&nbsp; E</td></tr>`;
+    }
+
+    html += `<tr><td class="heure-cell">${cr.label.replace(/\n/g, '<br>')}</td>`;
+
+    jours.forEach(jour => {
+      const slot = slots.find(s => s.jour === jour && s.heure_debut === cr.debut);
+
+      if (slot) {
+        const estAnnule = slot.statut === 'annule';
+        const cellClass = estAnnule ? 'annule-cell' : '';
+        const hEff      = heuresEffectuees[slot.matiere_id] || 0;
+        const hTotal    = slot.heures_total || '?';
+
+        html += `<td class="${cellClass}">
+          <div class="cours-enspd">
+            <div class="cours-type">TD/TP</div>
+            <div class="cours-nom">${slot.matiere_nom}</div>
+            <div class="cours-prof">${slot.prof_nom}</div>
+            ${slot.salle ? `<div class="cours-salle">${slot.salle}</div>` : ''}
+            <div class="cours-heures">${hEff}/${hTotal}H</div>
+            ${estAnnule ? '<span style="color:#dc2626;font-size:0.65rem;font-weight:700">ANNULÉ</span>' : ''}
+          </div>
+        </td>`;
+      } else {
+        html += `<td class="vide-cell"><div class="cours-enspd">TD/TP</div></td>`;
+      }
+    });
+
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
+}
+
+// ── Rattrapages ──────────────────────────────────────────────────────────────
+async function chargerRattrapages() {
+  const tbody = document.getElementById('rattrapages-tbody');
+  if (!user.classe_id) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:1.5rem">Aucune classe associée.</td></tr>';
+    return;
+  }
+  try {
+    const data = await Rattrapages.planifies(user.classe_id);
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:1.5rem">Aucun rattrapage planifié.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(r => `<tr>
+      <td><strong>${r.matiere_nom}</strong></td>
+      <td>${r.prof_nom}</td>
+      <td>${r.jour}</td>
+      <td>${r.heure_debut} – ${r.heure_fin}</td>
+      <td>${r.salle || '—'}</td>
+      <td><span class="badge badge-warning">${r.statut}</span></td>
+    </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger)">${e.message}</td></tr>`;
+  }
+}
+
+// ── Signaler absence ─────────────────────────────────────────────────────────
+async function signalerAbsence() {
+  const profId     = document.getElementById('absence-prof').value;
+  const date       = document.getElementById('absence-date').value;
+  const heureDebut = document.getElementById('absence-heure-debut').value;
+  const heureFin   = document.getElementById('absence-heure-fin').value;
+  const msgEl      = document.getElementById('absence-msg');
+
+  if (!profId || !date) {
+    msgEl.className = 'alert alert-danger';
+    msgEl.textContent = 'Veuillez choisir un professeur et une date.';
+    msgEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    await Absences.constatee({ professeur_id: Number(profId), date_absence: date, heure_debut: heureDebut || null, heure_fin: heureFin || null });
+    msgEl.className = 'alert alert-success';
+    msgEl.textContent = '✅ Absence signalée. Un rattrapage sera planifié automatiquement.';
+    msgEl.classList.remove('hidden');
+    document.getElementById('absence-prof').value = '';
+    document.getElementById('absence-date').value = '';
+    document.getElementById('absence-heure-debut').value = '';
+    document.getElementById('absence-heure-fin').value = '';
+  } catch(e) {
+    msgEl.className = 'alert alert-danger';
+    msgEl.textContent = e.message;
+    msgEl.classList.remove('hidden');
+  }
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function afficherPage(nom) {
+  document.querySelectorAll('.page-content > section').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById(`page-${nom}`).classList.remove('hidden');
+  document.querySelector(`[data-page="${nom}"]`).classList.add('active');
+  const titres = { emploi: 'Mon emploi du temps', rattrapages: 'Rattrapages', absences: 'Signaler une absence' };
+  document.getElementById('page-titre').textContent = titres[nom] || nom;
+  if (nom === 'rattrapages') chargerRattrapages();
+}
+
+// ── Notifications ────────────────────────────────────────────────────────────
+async function chargerNotifications() {
+  try {
+    const [notifs, count] = await Promise.all([Notifications.lister(), Notifications.nonLues()]);
+    const badge = document.getElementById('notif-count');
+    if (count.total > 0) { badge.textContent = count.total; badge.classList.remove('hidden'); }
+    else badge.classList.add('hidden');
+    const liste = document.getElementById('notif-liste');
+    if (!notifs.length) { liste.innerHTML = '<div class="notif-empty">Aucune notification</div>'; return; }
+    liste.innerHTML = notifs.slice(0, 8).map(n => `
+      <div class="notif-item ${n.lu ? '' : 'non-lue'}" onclick="marquerLue(${n.id})">
+        ${n.message}
+        <div class="notif-time">${new Date(n.created_at).toLocaleString('fr-FR')}</div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function toggleNotifs() { document.getElementById('notif-panel').classList.toggle('hidden'); }
+async function marquerLue(id) { await Notifications.marquerLue(id); chargerNotifications(); }
+async function toutMarquerLues() {
+  await Notifications.toutesLues();
+  chargerNotifications();
+  document.getElementById('notif-panel').classList.add('hidden');
+}
+
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notif-panel');
+  const btn   = document.getElementById('btn-notif');
+  if (!panel.classList.contains('hidden') && !panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.classList.add('hidden');
+  }
+});
+</script>
+</body>
+</html>
