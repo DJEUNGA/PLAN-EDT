@@ -1,14 +1,16 @@
+
 // api.js — fonctions d'appel vers le backend Express
-
-const API = 'http://localhost:3000';
-
+ 
+// ✅ CORRIGÉ : s'adapte automatiquement au local ET à Railway (production)
+const API = window.location.origin;
+ 
 async function apiGet(url) {
   const res = await fetch(`${API}${url}`, { headers: headersAuth() });
   const data = await res.json();
   if (!res.ok) throw new Error(data.erreur || 'Erreur serveur');
   return data;
 }
-
+ 
 async function apiPost(url, body) {
   const res = await fetch(`${API}${url}`, {
     method:  'POST',
@@ -19,7 +21,7 @@ async function apiPost(url, body) {
   if (!res.ok) throw new Error(data.erreur || 'Erreur serveur');
   return data;
 }
-
+ 
 async function apiPut(url, body) {
   const res = await fetch(`${API}${url}`, {
     method:  'PUT',
@@ -30,7 +32,7 @@ async function apiPut(url, body) {
   if (!res.ok) throw new Error(data.erreur || 'Erreur serveur');
   return data;
 }
-
+ 
 async function apiDelete(url) {
   const res = await fetch(`${API}${url}`, {
     method:  'DELETE',
@@ -40,7 +42,7 @@ async function apiDelete(url) {
   if (!res.ok) throw new Error(data.erreur || 'Erreur serveur');
   return data;
 }
-
+ 
 // ── Matières ────────────────────────────────────────────
 const Matieres = {
   lister:     ()     => apiGet('/api/matieres'),
@@ -48,7 +50,7 @@ const Matieres = {
   modifier:   (id, data) => apiPut(`/api/matieres/${id}`, data),
   supprimer:  (id)   => apiDelete(`/api/matieres/${id}`),
 };
-
+ 
 // ── Professeurs ─────────────────────────────────────────
 const Professeurs = {
   lister:     ()     => apiGet('/api/professeurs'),
@@ -56,7 +58,7 @@ const Professeurs = {
   modifier:   (id, data) => apiPut(`/api/professeurs/${id}`, data),
   supprimer:  (id)   => apiDelete(`/api/professeurs/${id}`),
 };
-
+ 
 // ── Classes ─────────────────────────────────────────────
 const Classes = {
   lister:     ()     => apiGet('/api/classes'),
@@ -64,27 +66,27 @@ const Classes = {
   modifier:   (id, data) => apiPut(`/api/classes/${id}`, data),
   supprimer:  (id)   => apiDelete(`/api/classes/${id}`),
 };
-
+ 
 // ── Emplois du temps ────────────────────────────────────
 const Emplois = {
   detail:     (classe_id, semaine) => apiGet(`/api/emplois/detail?classe_id=${classe_id}&semaine=${semaine}`),
   generer:    (semaine) => apiPost('/api/emplois/generer', { semaine }),
   supprimer:  (id)      => apiDelete(`/api/emplois/${id}`),
 };
-
+ 
 // ── Absences ────────────────────────────────────────────
 const Absences = {
   lister:      (params = '') => apiGet(`/api/absences${params}`),
   preventive:  (data)  => apiPost('/api/absences/preventive', data),
   constatee:   (data)  => apiPost('/api/absences/constatee', data),
 };
-
+ 
 // ── Rattrapages ─────────────────────────────────────────
 const Rattrapages = {
   planifies:   (classe_id) => apiGet(`/api/rattrapages/planifies?classe_id=${classe_id}`),
   majStatut:   (id, statut) => apiPut(`/api/rattrapages/${id}/statut`, { statut }),
 };
-
+ 
 // ── Notifications ───────────────────────────────────────
 const Notifications = {
   lister:      ()   => apiGet('/api/notifications'),
@@ -92,9 +94,10 @@ const Notifications = {
   marquerLue:  (id) => apiPut(`/api/notifications/${id}/lue`, {}),
   toutesLues:  ()   => apiPut('/api/notifications/touteslues', {}),
 };
-
+ 
 // ── Utilisateurs ────────────────────────────────────────
 const Utilisateurs = {
   lister:      ()         => apiGet('/api/utilisateurs'),
+  creer:       (data)     => apiPost('/api/utilisateurs', data),
   toggleActif: (id, actif) => apiPut(`/api/utilisateurs/${id}/actif`, { actif }),
 };

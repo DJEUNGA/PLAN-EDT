@@ -1,7 +1,8 @@
+S
 // server.js
 // Stack : Node.js + Express + better-sqlite3 + JWT + bcrypt + node-cron
 // Hébergement prévu : Railway
-
+ 
 const express  = require('express');
 const cors     = require('cors');
 const helmet   = require('helmet');
@@ -9,13 +10,13 @@ const bcrypt   = require('bcrypt');
 const jwt      = require('jsonwebtoken');
 const path     = require('path');
 const cron     = require('node-cron');
-
+ 
 const db = require('./database');
-
+ 
 const app        = express();
 const PORT       = process.env.PORT       || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'changez_ce_secret_en_production';
-
+ 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
   origin:         process.env.FRONTEND_URL || '*',
@@ -24,11 +25,11 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
-
+ 
 // ─────────────────────────────────────────
 // MIDDLEWARES
 // ─────────────────────────────────────────
-
+ 
 function authentifier(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token      = authHeader && authHeader.split(' ')[1];
@@ -40,7 +41,7 @@ function authentifier(req, res, next) {
     return res.status(403).json({ erreur: 'Token invalide ou expiré.' });
   }
 }
-
+ 
 function autoriser(...rolesPermis) {
   return (req, res, next) => {
     if (!rolesPermis.includes(req.utilisateur.role)) {
@@ -49,29 +50,29 @@ function autoriser(...rolesPermis) {
     next();
   };
 }
-
+ 
 // ─────────────────────────────────────────
 // HELPER : Numéro de semaine
 // ─────────────────────────────────────────
-
+ 
 function getSemaineCourante() {
   const maintenant = new Date();
   const debutAnnee = new Date(maintenant.getFullYear(), 0, 1);
   return Math.ceil(((maintenant - debutAnnee) / 86400000 + debutAnnee.getDay() + 1) / 7);
 }
-
+ 
 // ─────────────────────────────────────────
 // ROUTE PRINCIPALE
 // ─────────────────────────────────────────
-
+ 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
-
+ 
 // ═════════════════════════════════════════
 // 1. AUTHENTIFICATION
 // ═════════════════════════════════════════
-
+ 
 app.post('/api/auth/inscription', async (req, res) => {
   const { nom, email, mot_de_passe, role, classe_id, professeur_id } = req.body;
   if (!nom || !email || !mot_de_passe || !role)
@@ -89,7 +90,7 @@ app.post('/api/auth/inscription', async (req, res) => {
     res.status(201).json({ message: 'Compte créé avec succès.', utilisateur_id: result.lastInsertRowid });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.post('/api/auth/connexion', async (req, res) => {
   const { email, mot_de_passe } = req.body;
   if (!email || !mot_de_passe)
@@ -111,16 +112,16 @@ app.post('/api/auth/connexion', async (req, res) => {
     });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 2. MATIÈRES
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/matieres', authentifier, (req, res) => {
   try { res.json(db.prepare('SELECT * FROM matieres').all()); }
   catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.post('/api/matieres', authentifier, autoriser('admin'), (req, res) => {
   const { nom, heures_semaine, duree_cours, couleur } = req.body;
   if (!nom || !heures_semaine || !duree_cours)
@@ -134,7 +135,7 @@ app.post('/api/matieres', authentifier, autoriser('admin'), (req, res) => {
     res.status(201).json({ message: 'Matière ajoutée.', id: result.lastInsertRowid });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.put('/api/matieres/:id', authentifier, autoriser('admin'), (req, res) => {
   const { nom, heures_semaine, duree_cours, couleur } = req.body;
   try {
@@ -143,21 +144,21 @@ app.put('/api/matieres/:id', authentifier, autoriser('admin'), (req, res) => {
     res.json({ message: 'Matière mise à jour.' });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.delete('/api/matieres/:id', authentifier, autoriser('admin'), (req, res) => {
   try { db.prepare('DELETE FROM matieres WHERE id = ?').run(req.params.id); res.json({ message: 'Matière supprimée.' }); }
   catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 3. PROFESSEURS
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/professeurs', authentifier, (req, res) => {
   try { res.json(db.prepare('SELECT * FROM professeurs').all()); }
   catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.post('/api/professeurs', authentifier, autoriser('admin'), (req, res) => {
   const { nom, matiere_id, salle, jours_disponibles } = req.body;
   if (!nom) return res.status(400).json({ erreur: 'Le nom est requis.' });
@@ -167,7 +168,7 @@ app.post('/api/professeurs', authentifier, autoriser('admin'), (req, res) => {
     res.status(201).json({ message: 'Professeur ajouté.', id: result.lastInsertRowid });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.put('/api/professeurs/:id', authentifier, autoriser('admin'), (req, res) => {
   const { nom, matiere_id, salle, jours_disponibles } = req.body;
   try {
@@ -176,21 +177,21 @@ app.put('/api/professeurs/:id', authentifier, autoriser('admin'), (req, res) => 
     res.json({ message: 'Professeur mis à jour.' });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.delete('/api/professeurs/:id', authentifier, autoriser('admin'), (req, res) => {
   try { db.prepare('DELETE FROM professeurs WHERE id = ?').run(req.params.id); res.json({ message: 'Professeur supprimé.' }); }
   catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 4. CLASSES
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/classes', authentifier, (req, res) => {
   try { res.json(db.prepare('SELECT * FROM classes').all()); }
   catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.post('/api/classes', authentifier, autoriser('admin'), (req, res) => {
   const { nom, niveau } = req.body;
   if (!nom || !niveau) return res.status(400).json({ erreur: 'nom et niveau sont requis.' });
@@ -199,7 +200,7 @@ app.post('/api/classes', authentifier, autoriser('admin'), (req, res) => {
     res.status(201).json({ message: 'Classe ajoutée.', id: result.lastInsertRowid });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.put('/api/classes/:id', authentifier, autoriser('admin'), (req, res) => {
   const { nom, niveau } = req.body;
   try {
@@ -207,16 +208,16 @@ app.put('/api/classes/:id', authentifier, autoriser('admin'), (req, res) => {
     res.json({ message: 'Classe mise à jour.' });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.delete('/api/classes/:id', authentifier, autoriser('admin'), (req, res) => {
   try { db.prepare('DELETE FROM classes WHERE id = ?').run(req.params.id); res.json({ message: 'Classe supprimée.' }); }
   catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 5. EMPLOIS DU TEMPS
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/emplois', authentifier, (req, res) => {
   const { classe_id, semaine } = req.query;
   try {
@@ -227,7 +228,7 @@ app.get('/api/emplois', authentifier, (req, res) => {
     res.json(db.prepare(query).all(...params));
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.get('/api/emplois/detail', authentifier, (req, res) => {
   const { classe_id, semaine } = req.query;
   if (!classe_id) return res.status(400).json({ erreur: 'classe_id est requis.' });
@@ -236,7 +237,7 @@ app.get('/api/emplois/detail', authentifier, (req, res) => {
     return res.json(getEmploiDuTemps(Number(classe_id), Number(semaine) || 1));
   } catch (err) { return res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // POST génération manuelle
 app.post('/api/emplois/generer', authentifier, autoriser('admin'), (req, res) => {
   const { semaine } = req.body;
@@ -250,16 +251,16 @@ app.post('/api/emplois/generer', authentifier, autoriser('admin'), (req, res) =>
     return res.status(500).json({ erreur: err.message });
   }
 });
-
+ 
 app.delete('/api/emplois/:id', authentifier, autoriser('admin'), (req, res) => {
   try { db.prepare('DELETE FROM emplois_du_temps WHERE id = ?').run(req.params.id); res.json({ message: 'Créneau supprimé.' }); }
   catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 6. ABSENCES
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/absences', authentifier, (req, res) => {
   const { professeur_id, type } = req.query;
   try {
@@ -270,7 +271,7 @@ app.get('/api/absences', authentifier, (req, res) => {
     res.json(db.prepare(query).all(...params));
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.post('/api/absences/preventive', authentifier, autoriser('admin', 'professeur'), (req, res) => {
   const { professeur_id, date_absence, heure_debut, heure_fin, motif } = req.body;
   if (!professeur_id || !date_absence)
@@ -283,7 +284,7 @@ app.post('/api/absences/preventive', authentifier, autoriser('admin', 'professeu
     res.status(201).json({ message: 'Absence préventive enregistrée.', ...resultat });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.post('/api/absences/constatee', authentifier, autoriser('admin', 'etudiant'), (req, res) => {
   const { professeur_id, date_absence, heure_debut, heure_fin } = req.body;
   if (!professeur_id || !date_absence)
@@ -294,11 +295,11 @@ app.post('/api/absences/constatee', authentifier, autoriser('admin', 'etudiant')
     res.status(201).json({ message: 'Absence constatée enregistrée.', ...resultat });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 7. RATTRAPAGES
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/rattrapages', authentifier, (req, res) => {
   const { classe_id, statut } = req.query;
   try {
@@ -309,7 +310,7 @@ app.get('/api/rattrapages', authentifier, (req, res) => {
     res.json(db.prepare(query).all(...params));
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.get('/api/rattrapages/planifies', authentifier, (req, res) => {
   const { classe_id } = req.query;
   if (!classe_id) return res.status(400).json({ erreur: 'classe_id est requis.' });
@@ -318,7 +319,7 @@ app.get('/api/rattrapages/planifies', authentifier, (req, res) => {
     res.json(getRattrapages(Number(classe_id)));
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.put('/api/rattrapages/:id/statut', authentifier, autoriser('admin'), (req, res) => {
   const { statut } = req.body;
   if (!['effectue', 'annule'].includes(statut))
@@ -328,47 +329,47 @@ app.put('/api/rattrapages/:id/statut', authentifier, autoriser('admin'), (req, r
     res.json({ message: `Rattrapage marqué comme ${statut}.` });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 8. NOTIFICATIONS
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/notifications', authentifier, (req, res) => {
   try {
     res.json(db.prepare('SELECT * FROM notifications WHERE utilisateur_id = ? ORDER BY created_at DESC').all(req.utilisateur.id));
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.get('/api/notifications/nonlues', authentifier, (req, res) => {
   try {
     res.json(db.prepare('SELECT COUNT(*) AS total FROM notifications WHERE utilisateur_id = ? AND lu = 0').get(req.utilisateur.id));
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.put('/api/notifications/:id/lue', authentifier, (req, res) => {
   try {
     db.prepare('UPDATE notifications SET lu = 1 WHERE id = ? AND utilisateur_id = ?').run(req.params.id, req.utilisateur.id);
     res.json({ message: 'Notification marquée comme lue.' });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.put('/api/notifications/touteslues', authentifier, (req, res) => {
   try {
     db.prepare('UPDATE notifications SET lu = 1 WHERE utilisateur_id = ?').run(req.utilisateur.id);
     res.json({ message: 'Toutes les notifications marquées comme lues.' });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 9. PROFIL
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/profil', authentifier, (req, res) => {
   try {
     res.json(db.prepare('SELECT id, nom, email, role, classe_id, professeur_id, actif, created_at FROM utilisateurs WHERE id = ?').get(req.utilisateur.id));
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 app.put('/api/profil/mot-de-passe', authentifier, async (req, res) => {
   const { ancien_mot_de_passe, nouveau_mot_de_passe } = req.body;
   if (!ancien_mot_de_passe || !nouveau_mot_de_passe)
@@ -382,17 +383,44 @@ app.put('/api/profil/mot-de-passe', authentifier, async (req, res) => {
     res.json({ message: 'Mot de passe mis à jour avec succès.' });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ═════════════════════════════════════════
 // 10. UTILISATEURS (admin)
 // ═════════════════════════════════════════
-
+ 
 app.get('/api/utilisateurs', authentifier, autoriser('admin'), (req, res) => {
   try {
     res.json(db.prepare('SELECT id, nom, email, role, classe_id, professeur_id, actif, created_at FROM utilisateurs').all());
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
+// ✅ NOUVELLE ROUTE — Création d'un utilisateur par l'admin
+app.post('/api/utilisateurs', authentifier, autoriser('admin'), async (req, res) => {
+  const { nom, email, mot_de_passe, role, classe_id, professeur_id } = req.body;
+ 
+  if (!nom || !email || !mot_de_passe || !role)
+    return res.status(400).json({ erreur: 'Tous les champs sont obligatoires.' });
+  if (!['admin', 'professeur', 'etudiant'].includes(role))
+    return res.status(400).json({ erreur: 'Rôle invalide.' });
+  if (role === 'etudiant' && !classe_id)
+    return res.status(400).json({ erreur: 'Une classe est requise pour un étudiant.' });
+  if (role === 'professeur' && !professeur_id)
+    return res.status(400).json({ erreur: 'Un profil professeur est requis.' });
+ 
+  try {
+    const existant = db.prepare('SELECT id FROM utilisateurs WHERE email = ?').get(email);
+    if (existant) return res.status(409).json({ erreur: 'Cet email est déjà utilisé.' });
+ 
+    const hash   = await bcrypt.hash(mot_de_passe, 10);
+    const result = db.prepare(`
+      INSERT INTO utilisateurs (nom, email, mot_de_passe, role, classe_id, professeur_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(nom, email, hash, role, classe_id || null, professeur_id || null);
+ 
+    res.status(201).json({ message: 'Utilisateur créé avec succès.', id: result.lastInsertRowid });
+  } catch (err) { res.status(500).json({ erreur: err.message }); }
+});
+ 
 app.put('/api/utilisateurs/:id/actif', authentifier, autoriser('admin'), (req, res) => {
   const { actif } = req.body;
   if (![0, 1].includes(Number(actif))) return res.status(400).json({ erreur: 'actif doit être 0 ou 1.' });
@@ -401,14 +429,14 @@ app.put('/api/utilisateurs/:id/actif', authentifier, autoriser('admin'), (req, r
     res.json({ message: `Compte ${actif ? 'activé' : 'désactivé'}.` });
   } catch (err) { res.status(500).json({ erreur: err.message }); }
 });
-
+ 
 // ─────────────────────────────────────────
 // 404
 // ─────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ erreur: `Route introuvable : ${req.method} ${req.path}` });
 });
-
+ 
 // ═════════════════════════════════════════
 // ⏰ GÉNÉRATION AUTOMATIQUE — Chaque Dimanche à 23h00
 // ═════════════════════════════════════════
@@ -425,7 +453,7 @@ cron.schedule('0 23 * * 0', () => {
 }, {
   timezone: 'Africa/Douala' // Fuseau horaire Cameroun
 });
-
+ 
 // ─────────────────────────────────────────
 // DÉMARRAGE
 // ─────────────────────────────────────────
@@ -434,5 +462,6 @@ app.listen(PORT, () => {
   console.log(`📌 Environnement : ${process.env.NODE_ENV || 'développement'}`);
   console.log(`⏰ Génération automatique : chaque Dimanche à 23h00 (heure de Douala)`);
 });
-
+ 
 module.exports = app;
+ 

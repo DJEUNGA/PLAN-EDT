@@ -253,7 +253,10 @@
       <!-- UTILISATEURS -->
       <section id="page-utilisateurs" class="hidden">
         <div class="table-container">
-          <div class="table-header"><h2>Utilisateurs</h2></div>
+          <div class="table-header">
+            <h2>Utilisateurs</h2>
+            <button class="btn btn-primary" onclick="ouvrirModalUtilisateur()">+ Ajouter</button>
+          </div>
           <div class="table-wrapper">
             <table>
               <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead>
@@ -316,7 +319,7 @@
   </div>
 </div>
 
-<!-- ✅ Modal Professeur NOUVEAU avec tableau disponibilités -->
+<!-- ✅ Modal Professeur avec tableau disponibilités -->
 <div class="modal-overlay hidden" id="modal-professeur">
   <div class="modal" style="max-width:580px">
     <div class="modal-header">
@@ -409,6 +412,53 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="fermerModal('modal-generer')">Annuler</button>
       <button class="btn btn-primary" id="btn-generer" onclick="genererEDT()">Générer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Modal Utilisateur (créer prof / étudiant / admin) -->
+<div class="modal-overlay hidden" id="modal-utilisateur">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Ajouter un utilisateur</h3>
+      <button class="btn-icon" onclick="fermerModal('modal-utilisateur')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-utilisateur-erreur" class="alert alert-danger hidden"></div>
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input type="text" id="util-nom" placeholder="ex: Dr KAMGA"/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="util-email" placeholder="ex: kamga@gmail.com"/>
+      </div>
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <input type="text" id="util-mdp" placeholder="ex: Kamga2026!"/>
+      </div>
+      <div class="form-group">
+        <label>Rôle</label>
+        <select id="util-role" onchange="changerRoleUtilisateur()">
+          <option value="etudiant">Étudiant</option>
+          <option value="professeur">Professeur</option>
+          <option value="admin">Administrateur</option>
+        </select>
+      </div>
+      <div class="form-group" id="util-champ-classe">
+        <label>Classe</label>
+        <select id="util-classe"><option value="">-- Choisir une classe --</option></select>
+      </div>
+      <div class="form-group hidden" id="util-champ-professeur">
+        <label>Profil professeur associé</label>
+        <select id="util-professeur"><option value="">-- Choisir un professeur --</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fermerModal('modal-utilisateur')">Annuler</button>
+      <button class="btn btn-primary" id="btn-util-creer" onclick="sauvegarderUtilisateur()">Créer le compte</button>
     </div>
   </div>
 </div>
@@ -523,7 +573,7 @@ async function chargerDonneesInit() {
             <td><span class="badge ${ab.type==='preventive'?'badge-warning':'badge-danger'}">${ab.type}</span></td><td>—</td></tr>`;
         }).join('');
 
-    ['edt-classe','rattrapage-classe'].forEach(id => {
+    ['edt-classe','rattrapage-classe','util-classe'].forEach(id => {
       const sel = document.getElementById(id);
       if (!sel) return;
       sel.innerHTML = '<option value="">-- Choisir une classe --</option>';
@@ -533,6 +583,10 @@ async function chargerDonneesInit() {
     const selProf = document.getElementById('prof-matiere');
     selProf.innerHTML = '<option value="">-- Choisir --</option>';
     m.forEach(mat => selProf.innerHTML += `<option value="${mat.id}">${mat.nom}</option>`);
+
+    const selUtilProf = document.getElementById('util-professeur');
+    selUtilProf.innerHTML = '<option value="">-- Choisir un professeur --</option>';
+    p.forEach(prof => selUtilProf.innerHTML += `<option value="${prof.id}">${prof.nom}</option>`);
   } catch(e) { console.error(e); }
 }
 
@@ -655,7 +709,6 @@ function ouvrirModalProfesseur(p = null) {
   document.getElementById('prof-salle').value   = p ? (p.salle || '') : '';
   document.getElementById('prof-matiere').value = p ? (p.matiere_id || '') : '';
 
-  // Remplir les disponibilités
   let dispos = null;
   if (p && p.jours_disponibles) {
     try { dispos = JSON.parse(p.jours_disponibles); } catch(e) {}
@@ -862,6 +915,78 @@ async function chargerUtilisateurs() {
 }
 
 async function toggleUtilisateur(id, actif) { await Utilisateurs.toggleActif(id, actif); chargerUtilisateurs(); }
+
+// ── Création utilisateur (modal) ─────────────────────────────────────────────
+function ouvrirModalUtilisateur() {
+  document.getElementById('util-nom').value   = '';
+  document.getElementById('util-email').value = '';
+  document.getElementById('util-mdp').value   = '';
+  document.getElementById('util-role').value  = 'etudiant';
+  document.getElementById('util-classe').value = '';
+  document.getElementById('util-professeur').value = '';
+  changerRoleUtilisateur();
+  document.getElementById('modal-utilisateur-erreur').classList.add('hidden');
+  document.getElementById('modal-utilisateur').classList.remove('hidden');
+}
+
+function changerRoleUtilisateur() {
+  const role = document.getElementById('util-role').value;
+  const champClasse = document.getElementById('util-champ-classe');
+  const champProf   = document.getElementById('util-champ-professeur');
+  if (role === 'etudiant') {
+    champClasse.classList.remove('hidden');
+    champProf.classList.add('hidden');
+  } else if (role === 'professeur') {
+    champClasse.classList.add('hidden');
+    champProf.classList.remove('hidden');
+  } else {
+    champClasse.classList.add('hidden');
+    champProf.classList.add('hidden');
+  }
+}
+
+async function sauvegarderUtilisateur() {
+  const role = document.getElementById('util-role').value;
+  const errEl = document.getElementById('modal-utilisateur-erreur');
+  const btn   = document.getElementById('btn-util-creer');
+
+  const payload = {
+    nom: document.getElementById('util-nom').value.trim(),
+    email: document.getElementById('util-email').value.trim(),
+    mot_de_passe: document.getElementById('util-mdp').value,
+    role,
+    classe_id: role === 'etudiant' ? (Number(document.getElementById('util-classe').value) || null) : null,
+    professeur_id: role === 'professeur' ? (Number(document.getElementById('util-professeur').value) || null) : null,
+  };
+
+  if (!payload.nom || !payload.email || !payload.mot_de_passe) {
+    errEl.textContent = 'Tous les champs sont obligatoires.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (role === 'etudiant' && !payload.classe_id) {
+    errEl.textContent = 'Veuillez choisir une classe pour cet étudiant.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (role === 'professeur' && !payload.professeur_id) {
+    errEl.textContent = 'Veuillez choisir le profil professeur associé.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Création...';
+  try {
+    await Utilisateurs.creer(payload);
+    fermerModal('modal-utilisateur');
+    chargerUtilisateurs();
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Créer le compte';
+  }
+}
 
 // ── Utilitaires ───────────────────────────────────────────────────────────────
 function fermerModal(id) { document.getElementById(id).classList.add('hidden'); }
