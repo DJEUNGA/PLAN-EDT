@@ -99,7 +99,15 @@ function getSemaineCourante() {
 // ─────────────────────────────────────────
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
+  const indexPath = path.join(FRONTEND_DIR, 'index.html');
+  console.log('🌐 Requête sur / — tentative de servir :', indexPath);
+  console.log('   Le fichier existe ?', fs.existsSync(indexPath));
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('❌ Erreur sendFile:', err.message);
+      res.status(500).json({ erreur: 'Erreur sendFile', detail: err.message, chemin: indexPath });
+    }
+  });
 });
 
 // ═════════════════════════════════════════
