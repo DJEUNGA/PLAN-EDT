@@ -5,7 +5,7 @@
   "main": "algorithm.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "cp -r ../frontend ./frontend 2>/dev/null; node server.js"
   },
   "keywords": [],
   "author": "",
