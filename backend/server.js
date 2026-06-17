@@ -24,11 +24,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changez_ce_secret_en_production';
 
 function trouverDossierFrontend() {
   const candidats = [
+    path.join(__dirname, 'frontend'),             // ✅ priorité : copié dans backend/ via Start Command
     path.join(__dirname, '..', 'frontend'),      // backend/server.js -> ../frontend
-    path.join(__dirname, 'frontend'),             // si frontend est dans le même dossier
     path.join(process.cwd(), 'frontend'),         // depuis la racine du process
     path.join(process.cwd(), 'backend', '..', 'frontend'),
+    path.join(process.cwd(), 'backend', 'frontend'),
     '/app/frontend',                              // chemin absolu typique sur Railway
+    '/app/backend/frontend',
   ];
 
   console.log('🔍 Diagnostic chemins :');
